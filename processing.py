@@ -3,13 +3,13 @@ from tkinter import *
 from PIL import Image, ImageTk, ImageFilter,ImageEnhance
 import random, math, time
 from collections import Counter, defaultdict, namedtuple
-
+import numpy as np
 #implement class structure
 
 
 INFILE = "images/mario.jpg"
 OUTFILE_STEM = "out"
-P = 9
+P = 14
 N = 70
 OUTPUT_ALL = True # Whether to output the image at each step
 
@@ -321,8 +321,8 @@ if OUTPUT_ALL:
     for pixel in cell_sets[cellnum]:
       frame_im.putpixel(pixel, lab2rgb(cell_color))
 
-  frame_im.save(OUTFILE_STEM + "house.png")
-  frame_im.show()
+  frame_im.save(OUTFILE_STEM + "3.png")
+  #frame_im.show()
   print ("Saved image %s3.png" % OUTFILE_STEM)
 
 del n_graph, n_scores
@@ -331,16 +331,78 @@ print ("Stage 5: N-merging complete, %d cells" % len(cell_sets))
 """
 Stage last: Output the image!
 """
+print("Stage 6 : P-clustering")
+"""
+def cluster(cells,cell_means):
+  clusters = defaultdict(set)
+
+  if len(cell_means) <= P:
+    return cells
+  for i in range(K_MEANS_TRIALS):
+    for cell in random.sample(cell_sets,P):
+      centroids[cell_means[cell]]
+
+cluster(cell_sets)
+"""
+#print(cell_sets[0])
+print(type(cell_means))
+def cluster(palette = cell_means):
+  prevpalette = palette
+  psize = len(prevpalette)
+  for color in cell_means:
+    r,g,b = lab2rgb(cell_means[color])
+    average = (r+g+b)/3
+    for c in (cell_means):
+      r,g,b = lab2rgb(cell_means[c])
+      average2 = (r+g+b)/3
+      if 0.95 < average/average2 < 1.15:
+        clr = (average + average2)/2
+        clr = rgb2lab((clr,clr,clr))
+        cell_means[c] = clr
+        cell_means[color] = clr
+      
+  palette = []
+  for i in cell_means:
+    if cell_means[i] not in palette:
+      palette.append(cell_means[i])
+  if len(prevpalette) == len(palette):
+    print(palette)
+    return palette
+  return cluster(palette)
+
+palette = cluster()
+print(len(palette))
+def recolor(image):
+  for cell in cell_sets:
+    for pixel in cell_sets[cell]:
+      image.putpixel(pixel, lab2rgb(cell_means[cell]))
+  return image
+
+frame_im = recolor(frame_im)
+frame_im.show()
+
+
+#find centroid for the cells in cell_sets
 
 frame_im = ImageEnhance.Contrast(frame_im).enhance(1.7)
-palette = []
+def rgbtohex(r,g,b):
+  r,g,b = hex(r)[2:], hex(g)[2:], hex(b)[2:]
+  if len(r) == 1:
+    r = "0" + r
+  if len(g) == 1:
+    g = "0" + g
+  if len(r) == 1:
+    b = "0" + b
+  return "#%s%s%s"%(r,g,b)
+
+'''palette = []
 for i in range(width):
   for j in range(height):
     currentColor = frame_im.getpixel((i,j))
     if currentColor not in palette:
         palette.append(currentColor)
 print(len(palette))
-frame_im.show()
+'''
 wnd = Tk()
 wnd.title("PBN")
 wnd.geometry("500x400")
@@ -350,9 +412,11 @@ canv = Canvas(wnd, width=400, height=400, bg='white')
 canv.pack()
 #store the palette, to number
 #display the palette in the canvas, not working properly
+
 for i in range(len(palette)):
-  color = palette[i]
-  canv.create_rectangle((i, i+30, 20, i+30), color = palette[i], width=10)
+  r,g,b = lab2rgb(palette[i])
+  color = rgbtohex(r,g,b)
+  canv.create_rectangle((i, i+30, 20, i+30), fill = color)
 
 wnd.mainloop()
 """if OUTPUT_ALL:

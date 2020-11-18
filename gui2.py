@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk,colorchooser,filedialog
 from PIL import Image
-
+print(hex(0))
 class paint:
     def __init__(self):
         self.penwidth = 10
