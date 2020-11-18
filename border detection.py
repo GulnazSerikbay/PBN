@@ -1,7 +1,7 @@
 from PIL import Image, ImageFilter, ImageEnhance
 import numpy as np
 
-image = Image.open('images/outhouse.png')
+image = Image.open('images/segmented.jpg')
 
 image.show()
 print(image.size)

@@ -7,7 +7,7 @@ from collections import Counter, defaultdict, namedtuple
 #implement class structure
 
 
-INFILE = "images/house.webp"
+INFILE = "images/mario.jpg"
 OUTFILE_STEM = "out"
 P = 9
 N = 70
@@ -56,6 +56,7 @@ width, height = im.size
 
 if OUTPUT_ALL:
   im.save(OUTFILE_STEM + "0.png")
+  #display in the canvas
   print ("Saved image %s0.png" % OUTFILE_STEM)
 
 def createPixlab(im):
@@ -73,17 +74,18 @@ print ("Stage 1: CIELAB conversion complete")
 """
 Stage 2: Partitioning the image into like-colored cells using flood fill
 """
-
+#color difference
 def d(color1, color2):
   return (abs(color1[0]-color2[0])**2 + abs(color1[1]-color2[1])**2 + abs(color1[2]-color2[2])**2)**.5
 
 def neighbours(pixel):
-  results = []
-  for neighbour in [(pixel[0]+1, pixel[1]), (pixel[0]-1, pixel[1]),
-            (pixel[0], pixel[1]+1), (pixel[0], pixel[1]-1)]:
+  nb = []
+  neighbours = [(pixel[0]+1, pixel[1]), (pixel[0]-1, pixel[1]),
+            (pixel[0], pixel[1]+1), (pixel[0], pixel[1]-1)]
+  for neighbour in neighbours:
     if 0 <= neighbour[0] < width and 0 <= neighbour[1] < height:
-      results.append(neighbour)
-  return results
+      nb.append(neighbour)
+  return nb
 
 def flood_fill(start_pixel):
   to_search = {start_pixel}
@@ -105,7 +107,7 @@ def flood_fill(start_pixel):
 # These two maps are inverses, pixel/s <-> number of cell containing pixel
 cell_sets = {}
 pixcell_map = {}
-unplaced_pixels = {(i, j) for i in X(width) for j in X(height)}
+unplaced_pixels = {(i, j) for i in range(width) for j in range(height)}
 
 while unplaced_pixels:
   start_pixel = unplaced_pixels.pop()
@@ -127,17 +129,17 @@ def mean_color(cell, color_map):
   L_sum = 0
   a_sum = 0
   b_sum = 0
+  n = len(cell)
   for pixel in cell:
     L, a, b = color_map[pixel]
     L_sum += L
     a_sum += a
     b_sum += b
-  return L_sum/len(cell), a_sum/len(cell), b_sum/len(cell)
+  return L_sum/n, a_sum/n, b_sum/n
 
 def remove_small(cell_size):
   if len(cell_sets) <= N:
     return
-
   small_cells = []
   for cellnum in cell_sets:
     if len(cell_sets[cellnum]) <= cell_size:
@@ -147,7 +149,6 @@ def remove_small(cell_size):
     for cell in cell_sets[cellnum]:
       for n in neighbours(cell):
         neighbour_reg = pixcell_map[n]
-
         if neighbour_reg != cellnum:
           neighbour_cells.append(neighbour_reg)
 
@@ -161,11 +162,10 @@ def remove_small(cell_size):
 
     cell_sets[closest_cell] |= cell_sets[cellnum]
     del cell_sets[cellnum]
-
     if len(cell_sets) <= N:
       return
 
-for cell_size in X(1, SMALL_CELL_THRESHOLD):
+for cell_size in range(1, SMALL_CELL_THRESHOLD):
   remove_small(cell_size)
 
 if OUTPUT_ALL:
@@ -173,7 +173,6 @@ if OUTPUT_ALL:
 
   for cellnum in cell_sets:
     cell_color = mean_color(cell_sets[cellnum], pixlab_map)
-
     for pixel in cell_sets[cellnum]:
       frame_im.putpixel(pixel, lab2rgb(cell_color))
 
@@ -194,8 +193,8 @@ for cellnum in cell_sets:
 
 n_graph = defaultdict(set)
 
-for i in X(width):
-  for j in X(height):
+for i in range(width):
+  for j in range(height):
     pixel = (i, j)
     cell = pixcell_map[pixel]
 
@@ -334,7 +333,13 @@ Stage last: Output the image!
 """
 
 frame_im = ImageEnhance.Contrast(frame_im).enhance(1.7)
-#frame_im.quantize(colors=P, method=None, kmeans=30, palette=None)
+palette = []
+for i in range(width):
+  for j in range(height):
+    currentColor = frame_im.getpixel((i,j))
+    if currentColor not in palette:
+        palette.append(currentColor)
+print(len(palette))
 frame_im.show()
 wnd = Tk()
 wnd.title("PBN")
@@ -345,19 +350,14 @@ canv = Canvas(wnd, width=400, height=400, bg='white')
 canv.pack()
 #store the palette, to number
 #display the palette in the canvas, not working properly
-palette = []
-for i in cell_means:
-  if cell_means[i] not in palette:
-    palette.append(cell_means[i])
-
-for c in palette:
-  color = lab2rgb(c) #r,g,b
-  canv.create_rectangle(c, c, c + 10, 10, color = color, width=10)
+for i in range(len(palette)):
+  color = palette[i]
+  canv.create_rectangle((i, i+30, 20, i+30), color = palette[i], width=10)
 
 wnd.mainloop()
-if OUTPUT_ALL:
+"""if OUTPUT_ALL:
   test_im.save(OUTFILE_STEM + "7.png")
 else:
   test_im.save(OUTFILE_STEM + ".png")
-
+"""
 print ("Done! (Time taken: {})".format(time.time() - total_time))
