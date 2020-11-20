@@ -1,7 +1,7 @@
 from PIL import Image, ImageFilter, ImageEnhance
 import numpy as np
 
-image = Image.open('images/segmented.jpg')
+image = Image.open('outputs/outmario.png')
 
 image.show()
 print(image.size)
@@ -24,13 +24,6 @@ for x in range(width):
     if currentColor != previousColor:
         outline.append((x,y))
         previousColor = currentColor
-for y in range(height,0):
-   for x in range(width,0):
-    currentColor = rgb.getpixel((x,y))
-    if currentColor != previousColor:
-        outline.append((x,y))
-        previousColor = currentColor
-   print(x)
    
 outimg = Image.new(image.mode,image.size)
 #newim.show()
@@ -39,7 +32,7 @@ for y in range(height):
       outimg.putpixel((x,y),(255,255,255))
 for i in outline:
    outimg.putpixel(i, (0, 0, 0)) 
-ImageEnhance.Sharpness(outimg).enhance(1.3)
+ImageEnhance.Sharpness(outimg).enhance(1.6)
 outimg.show()
-outimg.save("output.png")    
+outimg.save("outputs/outlinedmario.png")    
 

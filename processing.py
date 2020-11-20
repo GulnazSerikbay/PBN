@@ -1,6 +1,6 @@
 from __future__ import division
 from tkinter import *
-from PIL import Image, ImageTk, ImageFilter,ImageEnhance
+from PIL import Image, ImageTk, ImageFilter,ImageEnhance, ImageFont, ImageDraw
 import random, math, time
 from collections import Counter, defaultdict, namedtuple
 import numpy as np
@@ -10,7 +10,7 @@ import numpy as np
 INFILE = "images/mario.jpg"
 OUTFILE_STEM = "out"
 P = 14
-N = 70
+N = 55
 OUTPUT_ALL = True # Whether to output the image at each step
 
 FLOOD_FILL_TOLERANCE = 10
@@ -328,6 +328,8 @@ if OUTPUT_ALL:
 del n_graph, n_scores
 #INTERNET code complete
 print ("Stage 5: N-merging complete, %d cells" % len(cell_sets))
+
+
 """
 Stage last: Output the image!
 """
@@ -345,64 +347,139 @@ def cluster(cells,cell_means):
 cluster(cell_sets)
 """
 #print(cell_sets[0])
-print(type(cell_means))
-def cluster(palette = cell_means):
-  prevpalette = palette
-  psize = len(prevpalette)
-  for color in cell_means:
-    r,g,b = lab2rgb(cell_means[color])
-    average = (r+g+b)/3
-    for c in (cell_means):
-      r,g,b = lab2rgb(cell_means[c])
-      average2 = (r+g+b)/3
-      if 0.95 < average/average2 < 1.15:
-        clr = (average + average2)/2
-        clr = rgb2lab((clr,clr,clr))
-        cell_means[c] = clr
-        cell_means[color] = clr
-      
-  palette = []
-  for i in cell_means:
-    if cell_means[i] not in palette:
-      palette.append(cell_means[i])
-  if len(prevpalette) == len(palette):
-    print(palette)
-    return palette
-  return cluster(palette)
-
-palette = cluster()
-print(len(palette))
-def recolor(image):
-  for cell in cell_sets:
-    for pixel in cell_sets[cell]:
-      image.putpixel(pixel, lab2rgb(cell_means[cell]))
-  return image
-
-frame_im = recolor(frame_im)
-frame_im.show()
-
-
-#find centroid for the cells in cell_sets
-
-frame_im = ImageEnhance.Contrast(frame_im).enhance(1.7)
-def rgbtohex(r,g,b):
-  r,g,b = hex(r)[2:], hex(g)[2:], hex(b)[2:]
-  if len(r) == 1:
-    r = "0" + r
-  if len(g) == 1:
-    g = "0" + g
-  if len(r) == 1:
-    b = "0" + b
-  return "#%s%s%s"%(r,g,b)
-
-'''palette = []
+palette = []
 for i in range(width):
   for j in range(height):
     currentColor = frame_im.getpixel((i,j))
     if currentColor not in palette:
         palette.append(currentColor)
-print(len(palette))
-'''
+print(len(palette), "first")
+
+print(type(cell_means))
+def cluster(palette = cell_means):
+  prevpalette = palette
+  for color in cell_means:
+    L1,a1,b1 = cell_means[color]
+    
+    for c in (cell_means):
+      L2,a2,b2 = cell_means[c]
+      diff = (abs(L1-L2)**2 + abs(a1-a2)**2 + abs(b1-b2)**2)**.5
+      if diff <= 16:
+      #if 0.95 < average/average2 < 1.15:
+        r1,g1,b1 = lab2rgb(cell_means[c])
+        r2,g2,b2 = lab2rgb(cell_means[color])
+        avg = ((r1+r2)/2, (g1+g2)/2, (b1+b2)/2)
+        cell_means[c] = rgb2lab(avg)
+        cell_means[color] = rgb2lab(avg)
+      
+  palette = []
+  for i in cell_means:
+    if cell_means[i] not in palette:
+      palette.append(cell_means[i])
+  if prevpalette == palette:
+    return palette
+  return cluster(palette)
+
+palette = cluster()
+print(len(palette), "clustered")
+
+def recoloredImage():
+  image = Image.new("RGB", frame_im.size)
+  for cell in cell_sets:
+    for pixel in cell_sets[cell]:
+      image.putpixel(pixel, lab2rgb(cell_means[cell]))
+  return image
+
+frame_im = recoloredImage()
+
+frame_im = ImageEnhance.Contrast(frame_im).enhance(1.5)
+frame_im.show()
+#frame_im = ImageEnhance.Sharpness(frame_im).enhance(1.5)
+print("Stage 7: Identifying the cell centroids")
+
+def findCenters():
+  cell_centers = {}
+  for cell in cell_sets:
+    pixels = list(cell_sets[cell])
+    color = cell_means[cell]
+    colorindex = str(palette.index(color))
+    
+    n = len(pixels)
+    if n == 1:
+      centpixel = pixels[0]
+    elif n > 1: 
+      centpixel = pixels[n//2-2]
+
+    cell_centers[centpixel] = colorindex
+  return cell_centers
+    #font = ImageFont.truetype("arial.ttg", 10)
+    #w,h = font.getsize(str(colorindex))
+
+frame_im.save("outputs/outmario.png")
+
+image = Image.open('outputs/outmario.png')
+
+image.show()
+print(image.size)
+#pixels = image.load()
+#test2 outlining the image
+width, height = image.size
+print(width,height)
+previousColor = ()
+outline = []
+rgb = image.convert('RGB')
+for y in range(height):
+   for x in range(width):
+    currentColor = rgb.getpixel((x,y))
+    if currentColor != previousColor:
+        outline.append((x,y))
+        previousColor = currentColor
+for x in range(width):
+   for y in range(height):
+    currentColor = rgb.getpixel((x,y))
+    if currentColor != previousColor:
+        outline.append((x,y))
+        previousColor = currentColor
+   
+outimg = Image.new(image.mode,image.size)
+#newim.show()
+for y in range(height):
+   for x in range(width):
+      outimg.putpixel((x,y),(255,255,255))
+for i in outline:
+   outimg.putpixel(i, (0, 0, 0)) 
+ImageEnhance.Sharpness(outimg).enhance(1.6)
+outimg.show()
+#outimg.save("outputs/outlinedmario.png")
+
+def placeNumbers(image):
+  for center in cell_centers:
+    centext = ImageDraw.Draw(image)
+    font = ImageFont.truetype("calibri.ttf", 10)
+    centext.text(center, cell_centers[center],font = font, fill = "black")
+
+
+cell_centers = findCenters()
+placeNumbers(outimg)
+outimg.show()
+outimg.save("outputs/finalmario.png")
+
+
+#find centroid for the cells in cell_sets
+
+
+def rgbtohex(r,g,b):
+  r,g,b = hex(r)[2:], hex(g)[2:], hex(b)[2:]
+  if len(r) != 2:
+    r = "0" + r
+  if len(g) != 2:
+    g = "0" + g
+  if len(r) != 2:
+    b = "0" + b
+  return "#%s%s%s"%(r,g,b)
+
+
+
 wnd = Tk()
 wnd.title("PBN")
 wnd.geometry("500x400")
