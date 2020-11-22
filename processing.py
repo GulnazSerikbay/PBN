@@ -7,10 +7,10 @@ import numpy as np
 #implement class structure
 
 
-INFILE = "images/mario.jpg"
+INFILE = "images/hi.jpg"
 OUTFILE_STEM = "out"
 P = 14
-N = 55
+N = 70
 OUTPUT_ALL = True # Whether to output the image at each step
 
 FLOOD_FILL_TOLERANCE = 10
@@ -356,6 +356,7 @@ for i in range(width):
 print(len(palette), "first")
 
 print(type(cell_means))
+
 def cluster(palette = cell_means):
   prevpalette = palette
   for color in cell_means:
@@ -415,9 +416,9 @@ def findCenters():
     #font = ImageFont.truetype("arial.ttg", 10)
     #w,h = font.getsize(str(colorindex))
 
-frame_im.save("outputs/outmario.png")
+frame_im.save("outputs/lady.png")
 
-image = Image.open('outputs/outmario.png')
+image = Image.open('outputs/lady.png')
 
 image.show()
 print(image.size)
@@ -462,7 +463,7 @@ def placeNumbers(image):
 cell_centers = findCenters()
 placeNumbers(outimg)
 outimg.show()
-outimg.save("outputs/finalmario.png")
+outimg.save("outputs/finallady.png")
 
 
 #find centroid for the cells in cell_sets
@@ -474,11 +475,9 @@ def rgbtohex(r,g,b):
     r = "0" + r
   if len(g) != 2:
     g = "0" + g
-  if len(r) != 2:
+  if len(b) != 2:
     b = "0" + b
   return "#%s%s%s"%(r,g,b)
-
-
 
 wnd = Tk()
 wnd.title("PBN")
@@ -492,6 +491,7 @@ canv.pack()
 
 for i in range(len(palette)):
   r,g,b = lab2rgb(palette[i])
+  
   color = rgbtohex(r,g,b)
   canv.create_rectangle((i, i+30, 20, i+30), fill = color)
 
