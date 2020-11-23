@@ -1,12 +1,17 @@
 from tkinter import *
 from tkinter import ttk,colorchooser,filedialog
 from PIL import Image, ImageTk
-print(hex(0))
+import gui
+import processing
 
-
-class paint:
+#Painting interface
+class Paint:
     def __init__(self,master):
         self.master = master
+        self.master.title("E-Paint by Numbers")
+        self.master.geometry("800x800")
+        self.master.rowconfigure(0,weight = 1)
+        self.master.columnconfigure(0,weight = 1)
         self.penwidth = 10
         self.bgcolor = "white"
         self.txtcolor = "black"
@@ -17,8 +22,6 @@ class paint:
         self.c.bind('<Button-1>',self.locate_xy)
         self.c.bind('<B1-Motion>',self.paint)
         self.c.bind('<ButtonRelease-1>',self.reset)
-        
-        
         
     def locate_xy(self,event):
         self.x,self.y = event.x,event.y
@@ -32,8 +35,7 @@ class paint:
     def reset(self,event):
         self.x = None
         self.y = None
-    def showColor(color):
-        self.pencolor = color
+    
 
     def createWidgets(self):
         self.control = Frame(self.master,padx = 5,pady = 5)
@@ -78,6 +80,7 @@ class paint:
     def setbg(self):
         self.bgcolor = colorchooser.askcolor(color = self.bgcolor)[1]
         self.c['bg'] = self.bgcolor
+    
     def setPencolor(self):
         self.pencolor = colorchooser.askcolor(color = self.pencolor)[1]
     
@@ -93,7 +96,10 @@ class paint:
         #if no:
         self.master.destroy()
 
-    def palette(self): 
+    def palette(self):
+        def showColor(color):
+            self.pencolor = color
+
         palette = ["black","brown4", "pink2", "violet"]
         j =0
         for i in palette:
@@ -123,28 +129,64 @@ class paint:
 
         canvas.bind('<Button-1>',self.locate_xy)
         canvas.bind('<B1-Motion>',self.addLine) """
-        
-        
-        
 
+
+#PBN Genarator interface
+class PBN:
+    def __init__(self, master,image = None):
+        self.master = master
+        self.file = image
+        self.image = None
+        self.master.title("PBN Generator")
+        self.master.geometry("800x800")
+        self.master.rowconfigure(0,weight = 1)
+        self.master.columnconfigure(0,weight = 1)
+        self.createWidgetsPBN()
+
+    def createWidgetsPBN(self):
+        #img = ImageTk.PhotoImage(self.image)
+
+        self.c = Canvas(self.master, width=400, height=400, bg='white')
+        self.c.pack()
+
+        btn = Button(self.master, text = "Pick an image", command = self.pickFile)
+        btn.pack()
         
-    def changemode(self):
-        if self.master.bgcolor == "white":
-            self.master.config(bg = "black", fg = "white")
-            self.master.config(text = "Bright mode")
-            self.master.bgcolor = "black"
-        else: 
-            self.master.config(bg = "white", fg = "black")
-            self.modbtn.config(text = "Dark mode")
-            self.master.bgcolor = "white"
-    '''def changeWidth(self,e):
-        self.penwidth = e'''
+        self.startbtn = Button(self.master, text = "Start PBNing", state = DISABLED, command = self.startProcessing)
+
+    def startProcessing(self):
+        ImgProcessing = processing.Processing(self.master, self.file, 70)
+
+        for i in range(len(processing.ImgProcessing.palette)):
+            color = ImgProcessing.palette[i]
+            self.c.create_rectangle((i, i+30, 20, i+30), fill = color)
+
+    def pickFile(self):
+        #JPG recommended
+        file = filedialog.askopenfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images", title = "Select a file", filetypes = (('jpg files',"*.jpg"),('png files',"*.png")))
+        self.file = file
+        self.image = PhotoImage(self.file)
+        self.c.create_image(0,0, image = self.image, anchor = "nw")
+
+        self.startbtn.config(state = NORMAL)
+        
 
 if __name__ == '__main__':
     wnd = Tk()
-    paint(wnd)
-    wnd.title("GUI")
-    wnd.geometry("800x800")
-    wnd.rowconfigure(0,weight = 1)
-    wnd.columnconfigure(0,weight = 1)
+
+    pbn = PBN(wnd,"images/hi.jpg")
+    
     wnd.mainloop()
+        
+
+'''
+if __name__ == '__main__':
+    wnd = Tk()
+    fmain = Frame(wnd)
+    fPBN = Frame(wnd)
+    fPaint = Frame(wnd)
+    main = gui.Main(fmain)
+    #Paint(fPaint)
+    #PBN(fPBN)
+    '''
+    
