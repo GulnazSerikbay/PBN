@@ -8,31 +8,41 @@ import numpy as np
 #implement class structure
 
 class Processing:
-  OUTPUT_ALL = True # Whether to output the image at each step
-  OUTFILE_STEM = "out"
+  
 
-  FLOOD_FILL_TOLERANCE = 10
-  CLOSE_CELL_TOLERANCE = 5
-  SMALL_CELL_THRESHOLD = 10
-  #K_MEANS_TRIALS = 30
-  BLUR_RADIUS = 2
-  BLUR_RUNS = 3
-
-  def __init__(self, master, file = "images/hi.jpg", N = 70):
+  def __init__(self, master, file = "images/hi.jpg", N = 70, clrrange = 16):
     self.inpfile = file
-    self.filename = self.inpfile
+    
     self.master = master
-    self.total_time = time.time()
+    total_time = time.time()
+    self.clrrange = clrrange
+
+    self.OUTPUT_ALL = True # Whether to output the image at each step
+    self.OUTFILE_STEM = "out"
+
+    self.FLOOD_FILL_TOLERANCE = 10
+    self.CLOSE_CELL_TOLERANCE = 5
+    self.SMALL_CELL_THRESHOLD = 10
+    #K_MEANS_TRIALS = 30
+    #BLUR_RADIUS = 2
+    #BLUR_RUNS = 3
     #P = 14
     self.cell_sets, self.cell_means, self.image = self.processToNCells(N)
     
     self.palette = self.clustering()
     self.cell_centers = self.findCenters()
     self.outimage = self.outline()
-    self.outimage = self.placeNumbers(self.outimage)
+    self.placeNumbers()
     self.outimage.show()
-    self.outimage.save("outputs/final%s.png"%self.inpfile)
+    self.outimage.save("%s.png"%self.OUTFILE_STEM)
     self.createHexPalette()
+
+    """if OUTPUT_ALL:
+      test_im.save(OUTFILE_STEM + "7.png")
+    else:
+      test_im.save(OUTFILE_STEM + ".png")
+    """
+    print ("Done! (Time taken: {})".format(time.time() - total_time))
 
   ###Color conversion functions
   X = range
@@ -46,7 +56,7 @@ class Processing:
     x,y,z=xyz;x/=95.047;y/=100;z/=108.883;x=x**(1/3)if x>0.008856 else 7.787*x+16/116
     y=y**(1/3)if y>0.008856 else 7.787*y+16/116;z=z**(1/3)if z>0.008856 else 7.787*z + 16/116
     L=116*y-16;a=500*(x-y);b=200*(y-z);return(L,a,b)
-  def rgb2lab(self,rgb):return xyz2lab(rgb2xyz(rgb))
+  def rgb2lab(self,rgb):return self.xyz2lab(self.rgb2xyz(rgb))
   def lab2xyz(self,lab):
     L,a,b=lab;y=(L+16)/116;x=a/500+y;z=y-b/200;y=y**3 if y**3>0.008856 else(y-16/116)/7.787
     x=x**3 if x**3>0.008856 else (x-16/116)/7.787;z=z**3 if z**3>0.008856 else(z-16/116)/7.787
@@ -56,12 +66,10 @@ class Processing:
     g=x*-0.9689+y*1.8758+z*0.0415;b=x*0.0557+y*-0.2040+z*1.0570
     r=1.055*(r**(1/2.4))-0.055 if r>0.0031308 else 12.92*r;g=1.055*(g**(1/2.4))-0.055 if g>0.0031308 else 12.92*g
     b=1.055*(b**(1/2.4))-0.055 if b>0.0031308 else 12.92*b;r*=255;g*=255;b*=255;return(r,g,b)
-  def lab2rgb(self,lab):rgb=xyz2rgb(lab2xyz(lab));return tuple([int(round(x))for x in rgb])
+  def lab2rgb(self,lab):rgb=self.xyz2rgb(self.lab2xyz(lab));return tuple([int(round(x))for x in rgb])
 
   def processToNCells(self, N):
     #https://codegolf.stackexchange.com/questions/42217/paint-by-numbers
-   
-
     """
     Stage 1: Read in image and convert to CIELAB
     """
@@ -69,10 +77,10 @@ class Processing:
     im = Image.open(self.inpfile)
     width, height = im.size
 
-    if OUTPUT_ALL:
-      im.save(OUTFILE_STEM + "0.png")
+    if self.OUTPUT_ALL:
+      im.save(self.OUTFILE_STEM + "0.png")
       #display in the canvas
-      print ("Saved image %s0.png" % OUTFILE_STEM)
+      print ("Saved image %s0.png" % self.OUTFILE_STEM)
 
     def createPixlab(im):
       width, height = im.size
@@ -108,7 +116,7 @@ class Processing:
       start_color = pixlab_map[start_pixel]
       while to_search:
         pixel = to_search.pop()
-        if d(start_color, pixlab_map[pixel]) < FLOOD_FILL_TOLERANCE:
+        if d(start_color, pixlab_map[pixel]) < self.FLOOD_FILL_TOLERANCE:
           cell.add(pixel)
           unplaced_pixels.remove(pixel)
           for n in neighbours(pixel):
@@ -178,10 +186,10 @@ class Processing:
         if len(cell_sets) <= N:
           return
 
-    for cell_size in range(1, SMALL_CELL_THRESHOLD):
+    for cell_size in range(1, self.SMALL_CELL_THRESHOLD):
       remove_small(cell_size)
 
-    if OUTPUT_ALL:
+    if self.OUTPUT_ALL:
       frame_im = Image.new("RGB", im.size)
 
       for cellnum in cell_sets:
@@ -189,9 +197,9 @@ class Processing:
         for pixel in cell_sets[cellnum]:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
 
-      frame_im.save(OUTFILE_STEM + "1.png")
+      frame_im.save(self.OUTFILE_STEM + "1.png")
       frame_im.show()
-      print ("Saved image %s1.png" % OUTFILE_STEM)
+      print ("Saved image %s1.png" % self.OUTFILE_STEM)
 
     print ("Stage 3: Small cell merging complete, %d cells" % len(cell_sets))
     """
@@ -254,7 +262,7 @@ class Processing:
         close_cells = []
 
         for neighbour_cellnum in n_graph[cellnum]:
-          if d(cell_means[cellnum], cell_means[neighbour_cellnum]) < CLOSE_CELL_TOLERANCE:
+          if d(cell_means[cellnum], cell_means[neighbour_cellnum]) < self.CLOSE_CELL_TOLERANCE:
             close_cells.append(neighbour_cellnum)
 
         if close_cells:
@@ -275,7 +283,7 @@ class Processing:
           to_search = sorted(cell_sets.keys(), key=lambda x:len(cell_sets[x]), reverse=True)
           full_list = True
 
-    if OUTPUT_ALL:
+    if self.OUTPUT_ALL:
       frame_im = Image.new("RGB", im.size)
 
       for cellnum in cell_sets:
@@ -284,9 +292,9 @@ class Processing:
         for pixel in cell_sets[cellnum]:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
 
-      frame_im.save(OUTFILE_STEM + "2.png")
+      frame_im.save(self.OUTFILE_STEM + "2.png")
       frame_im.show()
-      print("Saved image %s2.png" % OUTFILE_STEM)
+      print("Saved image %s2.png" % self.OUTFILE_STEM)
 
     print ("Stage 4: Close color merging complete, %d cells" % len(cell_sets))
 
@@ -323,18 +331,18 @@ class Processing:
         n_scores[(n, merge_to)] = score(n, merge_to)
         n_scores[(merge_to, n)] = score(merge_to, n)
 
-    if OUTPUT_ALL:
+    if self.OUTPUT_ALL:
       frame_im = Image.new("RGB", im.size)
 
       for cellnum in cell_sets:
         cell_color = cell_means[cellnum]
 
         for pixel in cell_sets[cellnum]:
-          frame_im.putpixel(pixel, lab2rgb(cell_color))
+          frame_im.putpixel(pixel, self.lab2rgb(cell_color))
 
-      frame_im.save(OUTFILE_STEM + "3.png")
+      frame_im.save(self.OUTFILE_STEM + "3.png")
       #frame_im.show()
-      print ("Saved image %s3.png" % OUTFILE_STEM)
+      print ("Saved image %s3.png" % self.OUTFILE_STEM)
 
     del n_graph, n_scores
 
@@ -359,8 +367,6 @@ class Processing:
             palette.append(currentColor)
     print(len(palette), "colors, attempt 1...")
 
-    print(type(cell_means))
-
     #cluster the colors until proper palette is created
     def cluster(palette = cell_means):
       prevpalette = palette
@@ -370,7 +376,7 @@ class Processing:
         for c in (cell_means):
           L2,a2,b2 = cell_means[c]
           diff = (abs(L1-L2)**2 + abs(a1-a2)**2 + abs(b1-b2)**2)**.5
-          if diff <= 16: ##user changes the 
+          if diff <= self.clrrange: ##user changes the color range
           #if 0.95 < average/average2 < 1.15: - another comparison algorithm
             r1,g1,b1 = self.lab2rgb(cell_means[c])
             r2,g2,b2 = self.lab2rgb(cell_means[color])
@@ -395,13 +401,14 @@ class Processing:
       image = Image.new("RGB", self.image.size)
       for cell in cell_sets:
         for pixel in cell_sets[cell]:
-          image.putpixel(pixel, lab2rgb(cell_means[cell]))
+          image.putpixel(pixel, self.lab2rgb(cell_means[cell]))
       return image
 
     newimage = recoloredImage()
 
     self.image = ImageEnhance.Contrast(newimage).enhance(1.5)
     self.image.show()
+    self.image.save(self.OUTFILE_STEM + "_clustered.png")
     #frame_im = ImageEnhance.Sharpness(frame_im).enhance(1.5)
 
     self.cell_sets = cell_sets
@@ -412,12 +419,13 @@ class Processing:
     print("Stage 7: Identifying the cell centroids")
     cell_centers = {}
     cell_sets = self.cell_sets
-    cell_means = self.cell_sets
-
+    cell_means = self.cell_means
+    
+    
     for cell in cell_sets:
       pixels = list(cell_sets[cell])
       color = cell_means[cell]
-      colorindex = str(self.palette.index(color))
+      colorindex = str(self.palette.index(color)) 
         
       n = len(pixels)
       if n == 1:
@@ -440,12 +448,11 @@ class Processing:
   
   def outline(self):
     self.image.show()
-    print(self.image.size)
     #pixels = image.load()
     #test2 outlining the image
     width, height = self.image.size
 
-    print(width,height)
+    #print(width,height)
     previousColor = ()
     outline = []
     rgb = self.image.convert('RGB')
@@ -475,9 +482,9 @@ class Processing:
     return outimg
     #outimg.save("outputs/outlinedmario.png")
 
-  def placeNumbers(self,image):
+  def placeNumbers(self):
     for center in self.cell_centers:
-      centext = ImageDraw.Draw(image)
+      centext = ImageDraw.Draw(self.outimage)
       font = ImageFont.truetype("calibri.ttf", 9)
       centext.text(center, self.cell_centers[center],font = font, fill = "black")
     #cell_centers = findCenters()
@@ -501,15 +508,6 @@ class Processing:
       hexpalette.append(color)
     self.palette = hexpalette
       
-    
-    
    
 if __name__ == '__main__':
-   
-  """if OUTPUT_ALL:
-    test_im.save(OUTFILE_STEM + "7.png")
-  else:
-    test_im.save(OUTFILE_STEM + ".png")
-  """
-  print ("Done! (Time taken: {})".format(time.time() - ImgProcessing.total_time))
-    
+  pass
