@@ -12,8 +12,7 @@ class Main:
         self.master.columnconfigure(0,weight = 1)
 
         self.createWidgets()
-        self.name = self.input.get()
-
+        s
     def createWidgets(self):
         label1 = Label(self.master, text = "Welcome to PBN world!", pady = 30, font = ("Verdana", 30), fg = "#883858")
         label1.pack(pady = 30)
@@ -24,7 +23,6 @@ class Main:
         self.input = Entry(self.master, font = ("Verdana", 16))
         self.input.pack(pady = 20,ipady = 10, ipadx = 10)
 
-        
 
         generatorbtn = Button(self.master, text = "PBN Generator", command = self.goPBN, bg = "#8395A7", fg = "#DAE0E2",font = ("Verdana", 18), relief = GROOVE, width = 30)
         generatorbtn.pack(pady = 20)
@@ -33,14 +31,14 @@ class Main:
         paintbtn.pack(pady = 20)
 
     def goPBN(self):
-        
+        self.name = self.input.get()
         self.master.destroy()
         window = Tk()
         gui2.PBN(window,self.name)
         window.mainloop()
 
     def goColoring(self):
-        
+        self.name = self.input.get()
         self.master.quit()
         window = Tk()
         gui2.Paint(window,self.name)

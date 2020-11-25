@@ -9,7 +9,6 @@ import numpy as np
 
 class Processing:
   
-
   def __init__(self, master, file = "images/hi.jpg", N = 70, clrrange = 16):
     self.inpfile = file
     
@@ -27,6 +26,7 @@ class Processing:
     #BLUR_RADIUS = 2
     #BLUR_RUNS = 3
     #P = 14
+    self.imagesstate = ""
     self.cell_sets, self.cell_means, self.image = self.processToNCells(N)
     
     self.palette = self.clustering()

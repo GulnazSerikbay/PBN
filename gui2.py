@@ -14,7 +14,7 @@ class Paint:
         self.master.geometry("800x800")
         self.master.rowconfigure(0,weight = 1)
         self.master.columnconfigure(0,weight = 1)
-        self.penwidth = 10
+        self.penwidth = 2
         self.bgcolor = "white"
         self.txtcolor = "black"
         self.pencolor = "black"
@@ -32,8 +32,10 @@ class Paint:
 
     def paint(self,event):
         print(self.x,self.y,event.x,event.y)
+        
         if self.x and self.y:
-            self.c.create_line(self.x, self.y, event.x,event.y, fill = self.pencolor, smooth = True, capstyle = ROUND)
+            self.c.create_oval(self.x-2,self.y-2,event.x+2,event.y+2, fill = self.pencolor)
+            #self.c.create_line(self.x, self.y, event.x,event.y, fill = self.pencolor, smooth = True, capstyle = ROUND)
             self.x,self.y = event.x,event.y
 
     def reset(self,event):
@@ -41,15 +43,15 @@ class Paint:
         self.y = None
 
     def createWidgets(self):
-        self.control = Frame(self.master,padx = 5,pady = 5)
+        #self.control = Frame(self.master,padx = 5,pady = 5)
 
         welcome = Label(self.master,text = "Welcome, %s!"%self.user, pady = 30, font = ("Verdana", 30), fg = "#883858")
         welcome.pack()
 
-        self.label = Label(self.control, text = "Pen Width", font = ('arial 18'))
+        self.label = Label(self.master, text = "Pen Width", font = ('arial 18'))
         self.label.pack()
 
-        self.slider = ttk.Scale(self.control, from_= 10, to = 100, command = self.setpenwidth, orient = HORIZONTAL)
+        self.slider = ttk.Scale(self.master, from_= 2, to = 20, command = self.setpenwidth, orient = HORIZONTAL)
         self.slider.set(self.penwidth)
         self.slider.pack()
         #self.slider.grid(row = 0, column = 0, ipadx = 30)
@@ -138,14 +140,11 @@ class Paint:
         menu.add_cascade(label = "File", menu = minimenu)
         minimenu.add_command(label = "New Canvas", command = createCanvas)
 
-
         canvas = Canvas(self.wnd, width = 500,height = 500, bg = "white")
         canvas.pack()
 
         canvas.bind('<Button-1>',self.locate_xy)
         canvas.bind('<B1-Motion>',self.addLine) """
-
-
 #PBN Genarator interface
 class PBN:
     def __init__(self, master,user = None):
@@ -173,18 +172,19 @@ class PBN:
         btn = Button(self.master, text = "Pick an image", command = self.pickFile)
         btn.pack()
 
-        clrrange = IntVar()
-        self.colorrange = clrrange.get()
-
-        Radiobutton(self.master, text = "Less colors", variable = clrrange, value = 10).pack()
-        Radiobutton(self.master, text = "Medium", variable = clrrange, value = 16).pack()
-        Radiobutton(self.master, text = "More colors", variable = clrrange, value = 20).pack()
+        self.colorrange = IntVar()
+        Radiobutton(self.master, text = "Less colors", variable = self.colorrange, value = 10).pack()
+        Radiobutton(self.master, text = "Medium", variable = self.colorrange, value = 16).pack()
+        Radiobutton(self.master, text = "More colors", variable = self.colorrange, value = 20).pack()
 
         self.startbtn = Button(self.master, text = "Start PBNing", state = DISABLED, command = self.startProcessing)
         self.startbtn.pack()
 
         self.paint = Button(self.master, text = "Paint virtually", state = DISABLED, command = self.goPaint)
         self.paint.pack()
+
+        self.download = Button(self.master, text = "Download the image", state = DISABLED, command = self.downloadImage)
+        self.download.pack()
 
     def exit(self):
         self.master.destroy()
@@ -196,14 +196,18 @@ class PBN:
         self.master.destroy()
         wnd = Tk()
         paint = Paint(wnd,self.user,self.imgfile)
+    
+    def downloadImage(self):
+        Image.open(self.file).save("final.png")
 
     def startProcessing(self):
-        ImgProcessing = processing.Processing(self.master, self.file, 70, self.colorrange)
+        ImgProcessing = processing.Processing(self.master, self.file, 70, self.colorrange.get())
         self.imgfile = ImgProcessing.OUTFILE_STEM + ".png"
         self.image = Image.open(self.imgfile)
         self.image = ImageTk.PhotoImage(self.image)
         self.c.image = self.c.create_image(0,0, image = self.image, anchor = "nw")
-
+        
+        self.download.config(state = NORMAL)
         self.paint.config(state = NORMAL)
     
 
