@@ -12,9 +12,9 @@ class Main:
         self.master.columnconfigure(0,weight = 1)
 
         self.createWidgets()
-        s
+    
     def createWidgets(self):
-        label1 = Label(self.master, text = "Welcome to PBN world!", pady = 30, font = ("Verdana", 30), fg = "#883858")
+        label1 = Label(self.master, text = "Welcome to PBN world!", font = ("Verdana", 30), fg = "#883858")
         label1.pack(pady = 30)
 
         label2 = Label(self.master, text = "Your name", font = ("Verdana", 18), fg = "black")
