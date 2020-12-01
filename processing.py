@@ -1,6 +1,9 @@
+#Name: Gulnaz Serikbay
+""" Description: Backend of the project - Image Processing """
+
 from __future__ import division
 from tkinter import *
-from tkinter import filedialog
+from tkinter import filedialog,ttk
 from PIL import Image, ImageTk, ImageFilter,ImageEnhance, ImageFont, ImageDraw
 import random, math, time
 from collections import Counter, defaultdict, namedtuple
@@ -9,41 +12,36 @@ import numpy as np
 
 class Processing:
   
-  def __init__(self, imagestate, file = "images/hi.jpg", N = 70, clrrange = 16):
+  def __init__(self, wnd, imagestate, file = "", N = 0, clrrange = 16):
     self.inpfile = file
     
-    self.state = imagestate
+    self.state = "Processing started"
     total_time = time.time()
     self.clrrange = clrrange
-
+    self.master = wnd
     self.OUTPUT_ALL = True # Whether to output the image at each step
     self.OUTFILE_STEM = "out"
 
     self.FLOOD_FILL_TOLERANCE = 10
     self.CLOSE_CELL_TOLERANCE = 5
     self.SMALL_CELL_THRESHOLD = 10
-    #K_MEANS_TRIALS = 30
-    #BLUR_RADIUS = 2
-    #BLUR_RUNS = 3
-    #P = 14
-    
-    self.cell_sets, self.cell_means, self.image = self.processToNCells(N)
+    self.HEIGHT = 520
+    self.N = N
+    if self.master:
+      self.state = StringVar()
+      self.state.set("")
+      self.imagestate = Label(self.master, textvariable = self.state, font = ("Verdana", 14))
+      self.imagestate.place(x = 370, y = 590)
+      self.master.update()
+
+    self.cell_sets, self.cell_means, self.image = self.processToNCells(self.N)
     
     self.palette = self.clustering()
     self.cell_centers = self.findCenters()
     self.outimage = self.outline()
     self.placeNumbers()
-    self.outimage.show()
-    #self.outimage.save("%s.png"%self.OUTFILE_STEM)
     self.createHexPalette()
-
-    """if OUTPUT_ALL:
-      test_im.save(OUTFILE_STEM + "7.png")
-    else:
-      test_im.save(OUTFILE_STEM + ".png")
-    """
-    self.state.configure(text = "Done! (Time taken: {})".format(time.time() - total_time))
-    #print ("Done! (Time taken: {})".format(time.time() - total_time))
+    self.state = "Done! (Time taken: {})".format(time.time() - total_time)
 
   ###Color conversion functions
   X = range
@@ -69,20 +67,43 @@ class Processing:
     b=1.055*(b**(1/2.4))-0.055 if b>0.0031308 else 12.92*b;r*=255;g*=255;b*=255;return(r,g,b)
   def lab2rgb(self,lab):rgb=self.xyz2rgb(self.lab2xyz(lab));return tuple([int(round(x))for x in rgb])
 
+  def neighbours(self,pixel):
+      nb = []
+      neighbours = [(pixel[0]+1, pixel[1]), (pixel[0]-1, pixel[1]),
+                (pixel[0], pixel[1]+1), (pixel[0], pixel[1]-1)]
+      for neighbour in neighbours:
+        if 0 <= neighbour[0] < self.width and 0 <= neighbour[1] < self.height:
+          nb.append(neighbour)
+      return nb
+  
+  #def updatestate(self):
+
   def processToNCells(self, N):
-    #https://codegolf.stackexchange.com/questions/42217/paint-by-numbers
     """
-    Stage 1: Read in image and convert to CIELAB
+    Stage 1: Read the image with PIL and convert to CIELAB(color)
     """
-    
     im = Image.open(self.inpfile)
     width, height = im.size
+    area = width*height
+    if N == 15:
+      if 1 <= area <= 60000:
+        N = 15
+      elif 60000 <= area <= 80000:
+        N = 20
+      elif 80000 < area <= 300000:
+        N = 50
+      elif area> 300000:
+        N = 70
+    if not (height == self.HEIGHT):
+      im = im.resize((width*self.HEIGHT//height,self.HEIGHT))
+    self.width,self.height = im.size
+    width,height = self.width,self.height #used in this function
 
+    #https://codegolf.stackexchange.com/questions/42217/paint-by-numbers
     if self.OUTPUT_ALL:
       im.save(self.OUTFILE_STEM + "0.png")
       #display in the canvas
-      self.state.configure(text = ("Saved image %s0.png" % self.OUTFILE_STEM))
-      print ("Saved image %s0.png" % self.OUTFILE_STEM)
+      self.state.set("Saved image %s0.png" % self.OUTFILE_STEM)
 
     def createPixlab(im):
       width, height = im.size
@@ -93,7 +114,7 @@ class Processing:
       return pixlab_map
 
     pixlab_map = createPixlab(im)
-    self.state.configure(text = "Stage 1: CIELAB conversion complete")
+    self.state.set("Stage 1: CIELAB conversion complete")
     
     """
     Stage 2: Partitioning the image into like-colored cells using flood fill
@@ -121,7 +142,7 @@ class Processing:
         if d(start_color, pixlab_map[pixel]) < self.FLOOD_FILL_TOLERANCE:
           cell.add(pixel)
           unplaced_pixels.remove(pixel)
-          for n in neighbours(pixel):
+          for n in self.neighbours(pixel):
             if n in unplaced_pixels and n not in cell and n not in searched:
               to_search.add(n)
         else:
@@ -142,8 +163,7 @@ class Processing:
       for pixel in cell:
         pixcell_map[pixel] = cellnum
 
-    print ("Stage 2: Flood fill partitioning complete, %d cells" % len(cell_sets))
-    self.state.configure(text = "Stage 2: Flood fill partitioning complete, %d cells" % len(cell_sets))
+    self.state.set("Stage 2: Flood fill partitioning complete, %d cells" % len(cell_sets))
     """
     Stage 3: Merge cells with less than a specified threshold amount of pixels to reduce the number of cells
         +Get rid of noise
@@ -170,7 +190,7 @@ class Processing:
       for cellnum in small_cells:
         neighbour_cells = []
         for cell in cell_sets[cellnum]:
-          for n in neighbours(cell):
+          for n in self.neighbours(cell):
             neighbour_reg = pixcell_map[n]
             if neighbour_reg != cellnum:
               neighbour_cells.append(neighbour_reg)
@@ -198,12 +218,12 @@ class Processing:
         cell_color = mean_color(cell_sets[cellnum], pixlab_map)
         for pixel in cell_sets[cellnum]:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
-
-      frame_im.save(self.OUTFILE_STEM + "1.png")
-      #frame_im.show()
-      self.state.configure(text = "Saved image %s1.png" % self.OUTFILE_STEM)
       
-    self.state.configure(text = "Stage 3: Small cell merging complete, %d cells" % len(cell_sets))
+      frame_im.save(self.OUTFILE_STEM + "1.png")
+      
+      self.state = "Saved image %s1.png" % self.OUTFILE_STEM
+      
+    self.state = "Stage 3: Small cell merging complete, %d cells" % len(cell_sets)
     """
     Stage 4: Close color merging
     """
@@ -257,7 +277,7 @@ class Processing:
     while len(cell_sets) > N and to_search:
       if time.time() - last_time > 15:
         last_time = time.time()
-        self.state.configure(text = "Close color merging... (%d cells remaining)" % len(cell_sets))
+        self.state = "Close color merging... (%d cells remaining)" % len(cell_sets)
         
 
       while to_search:
@@ -296,18 +316,15 @@ class Processing:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
 
       frame_im.save(self.OUTFILE_STEM + "2.png")
-      #frame_im.show()
 
-      self.state.configure(text = "Saved image %s2.png" % self.OUTFILE_STEM)
+      self.state = "Saved image %s2.png" % self.OUTFILE_STEM
 
-    self.state.configure(text = "Stage 4: Close color merging complete, %d cells" % len(cell_sets))
-  
+    self.state = "Stage 4: Close color merging complete, %d cells" % len(cell_sets)
 
     """
     Stage 5: N-merging - merge until <= N cells
         Want to merge either 1) small cells or 2) cells close in color
     """
-
     # Weight score between neighbouring cells by 1) size of cell and 2) color difference
     def score(cell1, cell2):
       return d(cell_means[cell1], cell_means[cell2]) * len(cell_sets[cell1])**.5
@@ -322,9 +339,8 @@ class Processing:
     while len(cell_sets) > N :
       if time.time() - last_time > 15:
         last_time = time.time()
-        self.state.configure(text = "N-merging... (%d cells remaining)" % len(cell_sets))
+        self.state = "N-merging... (%d cells remaining)" % len(cell_sets)
         
-
       merge_from, merge_to = min(n_scores, key=lambda x: n_scores[x])
 
       for n in n_graph[merge_from]:
@@ -347,13 +363,12 @@ class Processing:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
 
       frame_im.save(self.OUTFILE_STEM + "3.png")
-      #frame_im.show()
-      self.state.configure(text = "Saved image %s3.png" % self.OUTFILE_STEM)
+      self.state = "Saved image %s3.png" % self.OUTFILE_STEM
       
 
     del n_graph, n_scores
 
-    self.state.configure(text = "Stage 5: N-merging complete, %d cells" % len(cell_sets))
+    self.state = "Stage 5: N-merging complete, %d cells" % len(cell_sets)
 
     return cell_sets,cell_means,frame_im
 
@@ -363,16 +378,15 @@ class Processing:
 
     width, height = self.image.size
 
-    self.state.configure(text = "Stage 6 : P-clustering")
+    self.state = "Stage 6 : P-clustering"
   
-    #print(cell_sets[0])
     palette = []
     for i in range(width):
       for j in range(height):
         currentColor = self.image.getpixel((i,j))
         if currentColor not in palette:
             palette.append(currentColor)
-    self.state.configure(text = str(len(palette)) + "color clusters")
+    self.state = str(len(palette)) + "color clusters"
 
     #cluster the colors until proper palette is created
     def cluster(palette = cell_means):
@@ -400,10 +414,10 @@ class Processing:
       return cluster(palette)
 
     palette = cluster()
-    self.state.configure(text = str(len(palette)) + "colors: clustered image...")
+    self.state = str(len(palette)) + "colors: clustered image..."
     
 
-    #recreate an image with clusteres colors
+    #recreate an image with clustered colors
     def recoloredImage():
       image = Image.new("RGB", self.image.size)
       for cell in cell_sets:
@@ -411,52 +425,64 @@ class Processing:
           image.putpixel(pixel, self.lab2rgb(cell_means[cell]))
       return image
 
-    newimage = recoloredImage()
-
-    self.image = ImageEnhance.Contrast(newimage).enhance(1.5)
-    #self.image.show()
     self.image.save(self.OUTFILE_STEM + "_clustered.png")
-    #frame_im = ImageEnhance.Sharpness(frame_im).enhance(1.5)
 
     self.cell_sets = cell_sets
     self.cell_means = cell_means
     return palette
   
   def findCenters(self):
-    self.state.configure(text = "Stage 7: Identifying the cell centroids")
+    def choosecenter(pixels,xs,ys, n, prevpixels = []):
+      if n == 0:
+        x = len(pixels)
+        p = pixels[x//2]
+        
+      else:
+        p = random.choice(pixels)
+        if len(pixels) == 1:
+          return p
+      if p not in pixels:
+        prevpixels.append(p)
+        return choosecenter(pixels,xs,ys,1,prevpixels)
+      if p not in prevpixels:
+        neighbours = [(p[0]+1, p[1]), (p[0]-1, p[1]),
+                (p[0], p[1]+1), (p[0], p[1]-1)]
+        for neighbour in neighbours:
+          if neighbour not in pixels:
+            pixels.remove(p)
+            prevpixels.append(p)
+            return choosecenter(pixels,xs,ys,1,prevpixels)
+      return (p[0]-3,p[1]-5)
+
+    self.state = "Stage 7: Identifying the cell centroids"
     cell_centers = {}
     cell_sets = self.cell_sets
     cell_means = self.cell_means
-    
-    
+  
     for cell in cell_sets:
       pixels = list(cell_sets[cell])
       color = cell_means[cell]
       colorindex = str(self.palette.index(color)) 
         
       n = len(pixels)
-      if n == 1:
+      if n == 1 or n == 2:
         centpixel = pixels[0]
-      elif n > 1: 
-        centpixel = pixels[n//2]
-
-      cell_centers[centpixel] = colorindex
-
+      if 3 <= n <= 7:
+        centpixel = pixels[3]
+      elif n >= 8: 
+        xs,ys = [],[]
+        for p in pixels:
+          if p[0] not in xs:
+            xs.append(p[0])
+          if p[1] not in ys:
+            ys.append(p[1])
+        xs, ys = sorted(xs), sorted(ys)
+        centpixel = choosecenter(pixels, xs, ys, 0)
+        cell_centers[centpixel] = colorindex
     return cell_centers
-
-      #font = ImageFont.truetype("arial.ttg", 10)
-      #w,h = font.getsize(str(colorindex))
-    #self.image.save("outputs/lady.png")
-
-    #image = Image.open('outputs/lady.png')
   
   def outline(self):
-    self.image.show()
-    #pixels = image.load()
-    #test2 outlining the image
     width, height = self.image.size
-
-    #print(width,height)
     previousColor = ()
     outline = []
     rgb = self.image.convert('RGB')
@@ -474,24 +500,21 @@ class Processing:
             previousColor = currentColor
       
     outimg = Image.new(self.image.mode,self.image.size)
-    #newim.show()
+
     for y in range(height):
       for x in range(width):
           outimg.putpixel((x,y),(255,255,255))
     for i in outline:
-      outimg.putpixel(i, (0, 0, 0)) 
-    ImageEnhance.Sharpness(outimg).enhance(1.6)
-    outimg.show()
-    self.state.configure(text ="Image outlined")
+      outimg.putpixel(i, (0, 0, 0))
+    outimg = ImageEnhance.Sharpness(outimg).enhance(1.7)
+    self.state ="Stage 8: Image outlined"
     return outimg
-    #outimg.save("outputs/outlinedmario.png")
 
   def placeNumbers(self):
     for center in self.cell_centers:
       centext = ImageDraw.Draw(self.outimage)
-      font = ImageFont.truetype("calibri.ttf", 9)
+      font = ImageFont.truetype("calibri.ttf", 11)
       centext.text(center, self.cell_centers[center],font = font, fill = "black")
-    #cell_centers = findCenters()
 
   def createHexPalette(self):
     #rgbtohex converter
@@ -512,6 +535,5 @@ class Processing:
       hexpalette.append(color)
     self.palette = hexpalette
       
-   
 if __name__ == '__main__':
   pass
