@@ -102,6 +102,7 @@ class Paint:
             self.penwidth = self.slider.get()
             self.c.create_oval(self.x-self.penwidth,self.y-self.penwidth,event.x+self.penwidth,event.y+self.penwidth, fill = self.pencolor, outline = self.pencolor)
             self.x,self.y = event.x,event.y
+            self.widthlabel.config(text = "Pen Width")
             if self.currentpen:
                 self.c.delete(self.currentpen)
                 self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
