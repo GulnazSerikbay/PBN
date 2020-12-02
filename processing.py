@@ -14,11 +14,12 @@ class Processing:
   
   def __init__(self, wnd, imagestate, file = "", N = 0, clrrange = 16):
     self.inpfile = file
+    self.master = wnd
     
-    self.state = "Processing started"
+    self.master.update()
     total_time = time.time()
     self.clrrange = clrrange
-    self.master = wnd
+    
     self.OUTPUT_ALL = True # Whether to output the image at each step
     self.OUTFILE_STEM = "out"
 
@@ -28,10 +29,11 @@ class Processing:
     self.HEIGHT = 520
     self.N = N
     if self.master:
+      #display in the canvas
       self.state = StringVar()
-      self.state.set("")
+      self.state.set("Processing started")
       self.imagestate = Label(self.master, textvariable = self.state, font = ("Verdana", 14))
-      self.imagestate.place(x = 370, y = 590)
+      self.imagestate.place(x = 370, y = 590, width = 500)
       self.master.update()
 
     self.cell_sets, self.cell_means, self.image = self.processToNCells(self.N)
@@ -41,10 +43,10 @@ class Processing:
     self.outimage = self.outline()
     self.placeNumbers()
     self.createHexPalette()
-    self.state = "Done! (Time taken: {})".format(time.time() - total_time)
-
-  ###Color conversion functions
-  X = range
+    self.state.set("Done! (Time taken: {})".format(time.time() - total_time))
+    self.master.update()
+ 
+  #Color conversion functions
   # http://www.easyrgb.com/?X=MATH    
   def rgb2xyz(self,rgb):
     r,g,b=rgb;r/=255;g/=255;b/=255;r=((r+0.055)/1.055)**2.4 if r>0.04045 else r/12.92
@@ -66,7 +68,8 @@ class Processing:
     r=1.055*(r**(1/2.4))-0.055 if r>0.0031308 else 12.92*r;g=1.055*(g**(1/2.4))-0.055 if g>0.0031308 else 12.92*g
     b=1.055*(b**(1/2.4))-0.055 if b>0.0031308 else 12.92*b;r*=255;g*=255;b*=255;return(r,g,b)
   def lab2rgb(self,lab):rgb=self.xyz2rgb(self.lab2xyz(lab));return tuple([int(round(x))for x in rgb])
-
+  
+  X = range
   def neighbours(self,pixel):
       nb = []
       neighbours = [(pixel[0]+1, pixel[1]), (pixel[0]-1, pixel[1]),
@@ -76,8 +79,6 @@ class Processing:
           nb.append(neighbour)
       return nb
   
-  #def updatestate(self):
-
   def processToNCells(self, N):
     """
     Stage 1: Read the image with PIL and convert to CIELAB(color)
@@ -96,14 +97,12 @@ class Processing:
         N = 70
     if not (height == self.HEIGHT):
       im = im.resize((width*self.HEIGHT//height,self.HEIGHT))
+
     self.width,self.height = im.size
     width,height = self.width,self.height #used in this function
-
-    #https://codegolf.stackexchange.com/questions/42217/paint-by-numbers
+    
     if self.OUTPUT_ALL:
       im.save(self.OUTFILE_STEM + "0.png")
-      #display in the canvas
-      self.state.set("Saved image %s0.png" % self.OUTFILE_STEM)
 
     def createPixlab(im):
       width, height = im.size
@@ -115,7 +114,14 @@ class Processing:
 
     pixlab_map = createPixlab(im)
     self.state.set("Stage 1: CIELAB conversion complete")
-    
+    self.master.update()
+
+    '''Algorithms in this function are adapted from:
+    https://codegolf.stackexchange.com/questions/42217/paint-by-numbers
+    It generates the pixel map, makes the image more convenient for further changes
+    Was written in python2 and algorithms were repeated, I avoided repetitions, adapted some variables according to my project 
+    contains my codelines
+    '''
     """
     Stage 2: Partitioning the image into like-colored cells using flood fill
     """
@@ -164,6 +170,7 @@ class Processing:
         pixcell_map[pixel] = cellnum
 
     self.state.set("Stage 2: Flood fill partitioning complete, %d cells" % len(cell_sets))
+    self.master.update()
     """
     Stage 3: Merge cells with less than a specified threshold amount of pixels to reduce the number of cells
         +Get rid of noise
@@ -221,13 +228,12 @@ class Processing:
       
       frame_im.save(self.OUTFILE_STEM + "1.png")
       
-      self.state = "Saved image %s1.png" % self.OUTFILE_STEM
-      
-    self.state = "Stage 3: Small cell merging complete, %d cells" % len(cell_sets)
+    self.state.set("Stage 3: Small cell merging complete, %d cells" % len(cell_sets))
+    self.master.update()
     """
     Stage 4: Close color merging
     """
-    cell_means = {}
+    cell_means = {}#stores colors of each cell
 
     for cellnum in cell_sets:
       cell_means[cellnum] = mean_color(cell_sets[cellnum], pixlab_map)
@@ -277,9 +283,9 @@ class Processing:
     while len(cell_sets) > N and to_search:
       if time.time() - last_time > 15:
         last_time = time.time()
-        self.state = "Close color merging... (%d cells remaining)" % len(cell_sets)
+        self.state.set("Close color merging... (%d cells remaining)" % len(cell_sets))
+        self.master.update()
         
-
       while to_search:
         cellnum = to_search.pop()
         close_cells = []
@@ -294,7 +300,6 @@ class Processing:
 
             if neighbour_cellnum in to_search:
               to_search.remove(neighbour_cellnum)
-
           break
 
       if full_list == True:
@@ -317,9 +322,10 @@ class Processing:
 
       frame_im.save(self.OUTFILE_STEM + "2.png")
 
-      self.state = "Saved image %s2.png" % self.OUTFILE_STEM
+      #self.state = "Saved image %s2.png" % self.OUTFILE_STEM
 
-    self.state = "Stage 4: Close color merging complete, %d cells" % len(cell_sets)
+    self.state.set("Stage 4: Close color merging complete, %d cells" % len(cell_sets))
+    self.master.update()
 
     """
     Stage 5: N-merging - merge until <= N cells
@@ -339,7 +345,8 @@ class Processing:
     while len(cell_sets) > N :
       if time.time() - last_time > 15:
         last_time = time.time()
-        self.state = "N-merging... (%d cells remaining)" % len(cell_sets)
+        self.state.set("N-merging... (%d cells remaining)" % len(cell_sets))
+        self.master.update()
         
       merge_from, merge_to = min(n_scores, key=lambda x: n_scores[x])
 
@@ -361,16 +368,14 @@ class Processing:
 
         for pixel in cell_sets[cellnum]:
           frame_im.putpixel(pixel, self.lab2rgb(cell_color))
-
       frame_im.save(self.OUTFILE_STEM + "3.png")
-      self.state = "Saved image %s3.png" % self.OUTFILE_STEM
-      
-
     del n_graph, n_scores
 
-    self.state = "Stage 5: N-merging complete, %d cells" % len(cell_sets)
+    self.state.set("Stage 5: N-merging complete, %d cells" % len(cell_sets))
+    self.master.update()
 
     return cell_sets,cell_means,frame_im
+    '''Internet code end'''
 
   def clustering(self):
     cell_means = self.cell_means
@@ -378,7 +383,8 @@ class Processing:
 
     width, height = self.image.size
 
-    self.state = "Stage 6 : P-clustering"
+    self.state.set("Stage 6 : P-clustering")
+    self.master.update()
   
     palette = []
     for i in range(width):
@@ -386,7 +392,8 @@ class Processing:
         currentColor = self.image.getpixel((i,j))
         if currentColor not in palette:
             palette.append(currentColor)
-    self.state = str(len(palette)) + "color clusters"
+    self.state.set(str(len(palette)) + "color clusters")
+    self.master.update()
 
     #cluster the colors until proper palette is created
     def cluster(palette = cell_means):
@@ -414,16 +421,8 @@ class Processing:
       return cluster(palette)
 
     palette = cluster()
-    self.state = str(len(palette)) + "colors: clustered image..."
-    
-
-    #recreate an image with clustered colors
-    def recoloredImage():
-      image = Image.new("RGB", self.image.size)
-      for cell in cell_sets:
-        for pixel in cell_sets[cell]:
-          image.putpixel(pixel, self.lab2rgb(cell_means[cell]))
-      return image
+    self.state.set(str(len(palette)) + "colors: clustered image...")
+    self.master.update()
 
     self.image.save(self.OUTFILE_STEM + "_clustered.png")
 
@@ -436,7 +435,7 @@ class Processing:
       if n == 0:
         x = len(pixels)
         p = pixels[x//2]
-        
+   
       else:
         p = random.choice(pixels)
         if len(pixels) == 1:
@@ -454,7 +453,8 @@ class Processing:
             return choosecenter(pixels,xs,ys,1,prevpixels)
       return (p[0]-3,p[1]-5)
 
-    self.state = "Stage 7: Identifying the cell centroids"
+    self.state.set("Stage 7: Identifying the cell centroids")
+    self.master.update()
     cell_centers = {}
     cell_sets = self.cell_sets
     cell_means = self.cell_means
@@ -507,7 +507,8 @@ class Processing:
     for i in outline:
       outimg.putpixel(i, (0, 0, 0))
     outimg = ImageEnhance.Sharpness(outimg).enhance(1.7)
-    self.state ="Stage 8: Image outlined"
+    self.state.set("Stage 8: Image outlined")
+    self.master.update()
     return outimg
 
   def placeNumbers(self):

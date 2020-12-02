@@ -102,6 +102,10 @@ class Paint:
             self.penwidth = self.slider.get()
             self.c.create_oval(self.x-self.penwidth,self.y-self.penwidth,event.x+self.penwidth,event.y+self.penwidth, fill = self.pencolor, outline = self.pencolor)
             self.x,self.y = event.x,event.y
+            if self.currentpen:
+                self.c.delete(self.currentpen)
+                self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+                self.clabel = Label(self.c, text = "Current Brush",font = ("Verdana", 10), bg = "white")
 
     def reset(self,event):
         self.x = None
@@ -125,11 +129,11 @@ class Paint:
         
         tt1 = CreateToolTip(self.inpbtn, "Import new image")
         
-        #rubber = PhotoImage(file = "rubber.png").subsample(3,3)
+        
         self.eraser = Button(self.tools, text = "Eraser", font = ("Verdana", 10), bg = "white",
                             command = self.erase, width = 5, relief = RIDGE)
         self.eraser.grid(row = 1, column = 0)
-        #save = PhotoImage(file = "save.png").subsample(3,3)
+        
         self.save = Button(self.tools, text = "Save", font = ('Verdana', 10), bg = "white",  command = self.saveImage, width = 5, relief = RIDGE)
         self.save.grid(row = 1, column = 1)
         tt2 = CreateToolTip(self.save, "Save your painting")
@@ -148,15 +152,16 @@ class Paint:
         
         self.c = Canvas(self.master, width = 700, height= 520, bg = self.bgcolor, relief = GROOVE)
         self.c.place(x = 3, y = 50)
-        self.c.image = None
         #current penwidth,pencolor
-        self.currentpen = self.c.create_oval(660,30,660+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
-        self.clabel = Label(self.c, text = "Current pen", bg = "white")
-        self.clabel.place(x = 630,y = 4)
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+        self.clabel = Label(self.c, text = "Current Brush",font = ("Verdana", 10), bg = "white")
+        self.clabel.place(x = 610,y = 4)
+        tt5 = CreateToolTip(self.clabel, "This is how your current pen looks like")
         if self.image:
             self.image = Image.open(self.image)
-            self.c.image = ImageTk.PhotoImage(self.image)
-            self.c.create_image(0,0, image = self.c.image, anchor = "nw")        
+            self.image = ImageTk.PhotoImage(self.image)
+            self.c.image = self.c.create_image(0,0, image = self.image, anchor = "nw")   
+        self.saveimage = False     
         
         menu = Menu(self.master)
         self.master.config(menu = menu)
@@ -176,29 +181,20 @@ class Paint:
     def setpenwidth(self,event):
         self.penwidth = self.slider.get()
         self.c.delete(self.currentpen)
-        self.currentpen = self.c.create_oval(660,30,660+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
 
     def clearCanvas(self):
         self.c.delete('all')
         self.createPalette()
-        if self.c.image:
-            self.c.create_image(0,0, image = self.c.image, anchor = "nw")
+        if self.image:
+            self.c.image = self.c.create_image(0,0, image = self.image, anchor = "nw")
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+        self.clabel = Label(self.c, text = "Current Brush",font = ("Verdana", 10), bg = "white")
 
     def setbg(self):
         self.bgcolor = colorchooser.askcolor(color = self.bgcolor)[1]
         self.master.config(bg = self.bgcolor)
         self.welcome.config(bg = self.bgcolor)
-    
-    def moveText(self,event):
-        #self.c.move(self.text, event.x,event.y)
-        self.c.delete(self.text)
-        self.text = self.c.create_text(event.x,event.y, text = self.textinput, font = ("Verdana", 11))
-
-    def addText(self):
-        self.text = None
-        self.textinput = simpledialog.askstring("Text input", "Enter the text to insert")
-        self.text = self.c.create_text(5,5, text = self.textinput, font = ("Verdana", 11))
-        self.c.tag_bind(self.text, '<Button-1>', self.moveText)
              
     def erase(self):
         self.pencolor = self.erasercolor
@@ -209,13 +205,14 @@ class Paint:
         self.widthlabel.config(text = "Pen Width")
         self.c.delete(self.currentpen)
         self.penwidth = self.slider.get()
-        self.currentpen = self.c.create_oval(660,30,660+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
     
     def inputImage(self):
         img = filedialog.askopenfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images/outputs", title = "Select a file", filetypes = [('png files',".png")])
         cheight = self.c.winfo_height()
-        if img:
+        if self.image:
             self.c.delete(self.c.image)
+        if img:
             self.image = Image.open(img)
             width, height = self.image.size
             if not (height == cheight):
@@ -224,7 +221,10 @@ class Paint:
             self.c.image = self.c.create_image(0,0, image = self.image, anchor = "nw")
 
     def saveImage(self):
-        imagename = filedialog.asksaveasfilename(confirmoverwrite = False,defaultextension = '.png')
+        imagename = filedialog.asksaveasfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images/outputs",
+                                                    confirmoverwrite = False,defaultextension = '.png')
+        self.c.delete(self.currentpen)
+        self.clabel.destroy()
         if imagename:
             x = self.master.winfo_rootx() + self.c.winfo_x()
             y = self.master.winfo_rooty() + self.c.winfo_y()
@@ -232,19 +232,26 @@ class Paint:
             y1 = y + self.c.winfo_height()
             ImageGrab.grab().crop((x,y,x1,y1)).save(imagename)
             messagebox.showinfo("Save success","Image saved as " + str(imagename))
-   
+            self.saveimage = True
+        self.clabel = Label(self.c, text = "Current Brush",font = ("Verdana", 10), bg = "white")
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+
     def gohome(self):
+        if not self.saveimage:
+            response = messagebox.askyesno("Save the file?","Do you want to save the image?")
+            if response == 1:
+                self.saveImage()
         self.master.destroy()
         wnd = Tk()
         main.Main(wnd, self.user)
         wnd.mainloop()
 
     def exit(self):
-        response = messagebox.askyesno("Save the file?","Do you want to save the image?")
-        if response == 1:
-            self.saveImage()
-        else:
-            messagebox.showinfo("Thank YOU!","Thank you for using the app!")
+        if not self.saveimage:
+            response = messagebox.askyesno("Save the file?","Do you want to save the image?")
+            if response == 1:
+                self.saveImage()
+        messagebox.showinfo("Thank YOU!","Thank you for using the app!")
         self.master.destroy()
 
     def addNewcolor(self):
@@ -255,7 +262,7 @@ class Paint:
         self.pencolor = color
         self.c.delete(self.currentpen)
         self.penwidth = self.slider.get()
-        self.currentpen = self.c.create_oval(660,30,660+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
+        self.currentpen = self.c.create_oval(640,30,640+2*self.penwidth, 30+2*self.penwidth, fill = self.pencolor)
 
     def createPalette(self):
         addbtn = Button(self.colors, bg = "white", text = "+", relief = RIDGE, width = 2, command = self.addNewcolor)
@@ -367,8 +374,9 @@ class PBN:
 
     def downloadoutlineImage(self):
         self.outimagename = filedialog.asksaveasfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images/outputs", confirmoverwrite = False,defaultextension = '.png')
-        self.outimage1.save(self.outimagename)
-        messagebox.showinfo("Save PBN success","PBN saved as " + str(self.outimagename))
+        if self.outimagename:
+            self.outimage1.save(self.outimagename)
+            messagebox.showinfo("Save PBN success","PBN saved as " + str(self.outimagename))
 
     def downloadPalette(self):
         downname = filedialog.asksaveasfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images/outputs", confirmoverwrite = False,defaultextension = '.png')
@@ -380,7 +388,7 @@ class PBN:
             ImageGrab.grab().crop((x,y,x1,y1)).save(downname)
             messagebox.showinfo("Save palette success","Palette saved as " + str(downname))
     
-    def showcolored(self):
+    def showColored(self):
         self.c.delete("all")
         self.c.image = self.c.create_image(0,0, image = self.image2, anchor = "nw")
         self.showcolored.config(text = "Show outlined image", command = self.showoutlined)
@@ -388,27 +396,15 @@ class PBN:
     def showoutlined(self):
         self.c.delete("all")
         self.c.image = self.c.create_image(0,0, image = self.outimage2, anchor = "nw")
-        self.showcolored.config(text = "Show colored image", command = self.showcolored)
+        self.showcolored.config(text = "Show colored image", command = self.showColored)
     
-    '''def updatestate(self):
-        print("yay")
-        if self.ImgProcessing:
-            print(self.ImgProcessing.state)
-            self.imagestate.set(self.ImgProcessing.state)
-    '''
     def startProcessing(self):
-
-        self.imagestate.set("Processing started")
-        '''self.ImgProcessing = False
-        self.updatestate()
-        self.master.after(500, updatestate)'''
         
         self.N = int(self.numcells.get())
         self.ImgProcessing = processing.Processing(self.master,self.imagestate, self.file, self.N, self.colorrange.get())
         ImgProcessing = self.ImgProcessing
 
         self.image1 = ImgProcessing.image
-        
         self.image2 = ImageTk.PhotoImage(self.image1)
 
         self.outimage1 = ImgProcessing.outimage
@@ -417,7 +413,7 @@ class PBN:
         self.outimage2 = ImageTk.PhotoImage(self.outimage2)
         self.c.delete("all")
         self.c.image = self.c.create_image(0,0, image = self.outimage2, anchor = "nw")
-        self.showcolored = Button(self.c, text = "Show colored result", relief = RIDGE, bg = "white", command = self.showcolored)
+        self.showcolored = Button(self.c, text = "Show colored result", relief = RIDGE, bg = "white", command = self.showColored)
         self.showcolored.place(x = 2, y = 2, height = 30)
 
         self.paint.config(state = NORMAL)
@@ -452,6 +448,7 @@ class PBN:
         #JPG recommended
         if self.image:
             self.c.delete("all")
+            self.showcolored.destroy()
             self.file = None
         self.file = filedialog.askopenfilename(initialdir = "/Users/Gulnaz/Documents/GitHub/PBN/images", title = "Select a file", filetypes = (('jpg files',"*.jpg"),('png files',"*.png")))
         if self.file:
@@ -471,9 +468,9 @@ class PBN:
 
             self.image = ImageTk.PhotoImage(self.image)
             self.c.image = self.c.create_image(0,0, image = self.image, anchor = "nw")
-            self.startbtn.config(state = NORMAL)
             self.imagestate.set("Image uploaded")
-    
+            self.startbtn.config(state = NORMAL)
+            
 if __name__ == '__main__':
     wnd = Tk()
     paint = Paint(wnd)
