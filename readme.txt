@@ -6,4 +6,3 @@ Note: PIL and tkinter modules must be installed
 Download the folder PBN, open main.py, run. Insert your name in the entry box and press PBN generator if you want to generate the PBN image or press Start Coloring if you want to paint on the image. Most of the buttons and widgets on screen are accompanied by tooltips.
 
 
-WATCH demo-video.txt for DEMONSTRATION
